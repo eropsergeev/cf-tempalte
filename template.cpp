@@ -839,7 +839,7 @@ struct fictive {};
 
 template<class F>
 [[gnu::always_inline]] inline auto cond_cmp(F &&f) {
-    return [f]<class A, class B>(const A &a, const B &b)->bool {
+    return [f]<class A, class B>[[gnu::always_inline]](const A &a, const B &b)->bool {
         if constexpr (is_same_v<A, fictive>) {
             return 0;
         } else if constexpr (is_same_v<B, fictive>) {
