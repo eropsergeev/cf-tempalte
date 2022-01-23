@@ -94,7 +94,7 @@ template<bool neg>
 struct Inf {
     constexpr Inf() {}
     template<class T>
-    constexpr operator T() const {
+    [[nodiscard, gnu::pure]] constexpr operator T() const {
         if constexpr (is_floating_point_v<T>) {
             if constexpr (neg) {
                 return -numeric_limits<T>::infinity;
@@ -109,11 +109,11 @@ struct Inf {
         }
     }
     template<class T>
-    [[nodiscard]] constexpr auto operator<=>(const T &x) const {
+    [[nodiscard, gnu::pure]] constexpr auto operator<=>(const T &x) const {
         return (T) *this <=> x;
     }
     template<class T>
-    [[nodiscard]] constexpr auto operator==(const T &x) const {
+    [[nodiscard, gnu::pure]] constexpr auto operator==(const T &x) const {
         return (T) *this == x;
     }
     Inf &operator=(const Inf&) = delete;
@@ -128,7 +128,7 @@ struct Inf {
 Inf<0> inf;
 
 template<class T1, class T2>
-inline bool mini(T1 &a, T2 b) {
+[[gnu::always_inline]] inline bool mini(T1 &a, T2 b) {
     if (a > b) {
         a = b;
         return 1;
@@ -137,7 +137,7 @@ inline bool mini(T1 &a, T2 b) {
 }
 
 template<class T1, class T2>
-inline bool maxi(T1 &a, T2 b) {
+[[gnu::always_inline]] inline bool maxi(T1 &a, T2 b) {
     if (a < b) {
         a = b;
         return 1;
@@ -293,12 +293,12 @@ namespace segtree {
 
 struct DoNothingFunc {
     template<class... Args>
-    void operator()(Args&&... args) const {}
+    [[gnu::always_inline]] void operator()(Args&&... args) const {}
 };
 
 struct AssignFunc {
     template<class T, class U, class... Args>
-    void operator()(T &x, U &&y, Args&&...) const {
+    [[gnu::always_inline]] void operator()(T &x, U &&y, Args&&...) const {
         x = forward<U>(y);
     }
 };
@@ -331,7 +331,7 @@ struct PointUpdatePolicyType {
     [[no_unique_address]] recalc_t recalc;
     [[no_unique_address]] join_t join;
     template<class F, class Policy>
-    static auto select(Policy policy) {
+    [[gnu::always_inline]] static auto select(Policy policy) {
         if constexpr (is_default_constructible_v<F>)
             return F();
         else
@@ -369,18 +369,18 @@ struct PointUpdatePolicyType {
             l, r);
     }
     template<class... Args>
-    void upd(size_t p, Args&&... args) {
+    [[gnu::always_inline]] void upd(size_t p, Args&&... args) {
         auto self = static_cast<Self *>(this);
         upd_impl(p, self->get_root(), 0, self->n, forward<Args>(args)...);
     }
-    void push(size_t, size_t, size_t) {}
+    [[gnu::always_inline]] void push(size_t, size_t, size_t) {}
 };
 
 template<class recalc_t, int priority = 0>
 struct PathUpdatePolicy {
     [[no_unique_address]] recalc_t recalc;
     template<class T>
-    T get() {
+    [[gnu::always_inline]] T get() {
         return recalc;
     }
     PathUpdatePolicy(recalc_t recalc): recalc(recalc) {}
@@ -399,7 +399,7 @@ struct JoinUpdatePolicy {
     [[no_unique_address]] join_t join;
     [[no_unique_address]] convert_t convert;
     template<class T>
-    T get() {
+    [[gnu::always_inline]] T get() {
         if constexpr (is_same_v<T, join_t>)
             return T(join);
         else
@@ -420,7 +420,7 @@ template<int priority, class gen_t, class Self>
 struct SegTreeInitType {
     static constexpr int init_priority = priority;
     static constexpr int update_priority = numeric_limits<int>::min();
-    void push(size_t, size_t, size_t) {}
+    [[gnu::always_inline]] void push(size_t, size_t, size_t) {}
     [[no_unique_address]] gen_t gen;
     template<class Policy>
     SegTreeInitType(Policy policy): gen(policy.template get<gen_t>()) {}
@@ -447,11 +447,11 @@ struct SegTreeInitType {
             }
         }
     }
-    void init() {
+    [[gnu::always_inline]] void init() {
         auto self = static_cast<Self *>(this);
         build(self->get_root(), 0, self->n);
     }
-    auto init(size_t l, size_t r) {
+    [[gnu::always_inline]] auto init(size_t l, size_t r) {
         if constexpr (is_invocable_v<gen_t, size_t, size_t>)
             return gen(l, r);
         else
@@ -464,7 +464,7 @@ struct InitPolicy {
     [[no_unique_address]] gen_t gen;
     InitPolicy(gen_t gen): gen(gen) {}
     template<class T>
-    T get() {
+    [[gnu::always_inline]] T get() {
         return gen;
     }
     template<class Self>
@@ -473,7 +473,7 @@ struct InitPolicy {
 
 struct IdentityFunc {
     template<class T, class... Args>
-    const T &operator()(const T &x, Args&&...) {
+    [[gnu::always_inline, gnu::const]] const T &operator()(const T &x, Args&&...) {
         return x;
     }
 };
@@ -484,12 +484,13 @@ struct GetPolicy {
     [[no_unique_address]] identity_t identity;
     [[no_unique_address]] convert_t convert;
     template<class T>
-    T get() {
+    [[gnu::always_inline]] T get() {
         if constexpr (is_same_v<T, join_t>)
             return join;
         else if constexpr (is_same_v<T, identity_t>)
             return identity;
     }
+    [[gnu::always_inline]]
     GetPolicy(join_t join, identity_t identity, convert_t convert = convert_t()):
         join(join),
         identity(identity),
@@ -533,11 +534,11 @@ struct GetPolicy {
                 args..., l, r);
         }
         template<class... Args>
-        auto get(size_t ql, size_t qr, const Args&... args) {
+        [[gnu::always_inline]] auto get(size_t ql, size_t qr, const Args&... args) {
             auto self = static_cast<Self *>(this);
             return get_impl(ql, qr, self->get_root(), 0, self->n, args...);
         }
-        void push(size_t, size_t, size_t) {}
+        [[gnu::always_inline]] void push(size_t, size_t, size_t) {}
     };
 };
 
@@ -556,7 +557,7 @@ struct MassUpdatePolicy {
         static const int update_priority = numeric_limits<int>::min();
         [[no_unique_address]] MassUpdatePolicy policy;
         type(MassUpdatePolicy policy): policy(policy) {}
-        void push(size_t v, size_t l, size_t r) {
+        [[gnu::always_inline]] void push(size_t v, size_t l, size_t r) {
             auto self = static_cast<Self *>(this);
             if (r - l != 1) {
                 auto left = self->get_left(v, l, r);
@@ -585,7 +586,7 @@ struct MassUpdatePolicy {
             self->join(self->get_val(self->a[v]), self->get_val(self->a[left]), self->get_val(self->a[right]));
         }
         template<class... Args>
-        void mass_upd(size_t ql, size_t qr, Args&&... args) {
+        [[gnu::always_inline]] void mass_upd(size_t ql, size_t qr, Args&&... args) {
             auto self = static_cast<Self *>(this);
             mass_upd_impl(ql, qr, self->get_root(), 0, self->n, args...);
         }
@@ -593,18 +594,18 @@ struct MassUpdatePolicy {
 };
 
 struct BaseSegTree {
-    void init() {}
+    [[gnu::always_inline]] void init() {}
     template<class... Args>
-    void upd(Args&&...) {}
+    [[gnu::always_inline]] void upd(Args&&...) {}
     [[no_unique_address]] DoNothingFunc join;
 };
 
 #define SEG_TREE_HELPERS(SegTree) \
-    void push(size_t v, size_t l, size_t r) { \
+    [[gnu::always_inline]] void push(size_t v, size_t l, size_t r) { \
         (Policies<SegTree<T, Policies...>>::push(v, l, r), ...); \
     } \
     template<class... Args> \
-    void upd(size_t p, Args&&... args) { \
+    [[gnu::always_inline]] void upd(size_t p, Args&&... args) { \
         constexpr int max_prior = max({Policies<SegTree<T, Policies...>>::update_priority...}); \
         auto select = []<class X>(X x) { \
             if constexpr (X::update_priority >= max_prior) { \
@@ -620,7 +621,7 @@ struct BaseSegTree {
         return static_cast<typename P::template type<SegTree<T, Policies...>> &>(*this); \
     } \
     template<class... Args> \
-    void join(T &res, const T &a, const T &b, Args&&... args) { \
+    [[gnu::always_inline]] void join(T &res, const T &a, const T &b, Args&&... args) { \
         constexpr auto max_prior = max({Policies<SegTree<T, Policies...>>::update_priority...}); \
         auto select = []<class X>(X x) { \
             if constexpr (X::update_priority >= max_prior) { \
@@ -633,7 +634,7 @@ struct BaseSegTree {
             static_cast<decltype(select(declval<Policies<SegTree<T, Policies...>>>())) *>(this)->join, \
             res, a, b, args...), ...); \
     } \
-    auto init(size_t l, size_t r) { \
+    [[gnu::always_inline]] auto init(size_t l, size_t r) { \
         constexpr int max_prior = max({Policies<SegTree<T, Policies...>>::init_priority...}); \
         auto select = []<class X, class... Args>(auto select, X x, Args... args) { \
             if constexpr (X::init_priority >= max_prior) { \
@@ -667,16 +668,16 @@ struct SegTree: BaseSegTree, public Policies<SegTree<T, Policies...>>... {
         };
         (decltype(select(policies))::init(), ...);
     }
-    T &get_val(T &x) {
+    [[gnu::always_inline, gnu::const]] T &get_val(T &x) {
         return x;
     }
-    size_t get_left(size_t v, size_t, size_t) const {
+    [[gnu::always_inline, gnu::const]] size_t get_left(size_t v, size_t, size_t) const {
         return v * 2 + 1;
     }
-    size_t get_right(size_t v, size_t, size_t) const {
+    [[gnu::always_inline, gnu::const]] size_t get_right(size_t v, size_t, size_t) const {
         return v * 2 + 2;
     }
-    size_t get_root() const {
+    [[gnu::always_inline, gnu::const]] size_t get_root() const {
         return 0;
     }
     SEG_TREE_HELPERS(SegTree)
@@ -703,24 +704,24 @@ struct LazySegTree: BaseSegTree, public Policies<LazySegTree<T, Policies...>>...
         : Policies<LazySegTree<T, Policies...>>(policies)...
         , n(n)
     {}
-    T &get_val(Node &node) {
+    [[gnu::always_inline, gnu::const]] T &get_val(Node &node) {
         return node.val;
     }
-    size_t get_left(size_t v, size_t l, size_t r) {
+    [[gnu::always_inline]] size_t get_left(size_t v, size_t l, size_t r) {
         if (a[v].left == Node::null) {
             a[v].left = a.size();
             a.eb(init(l, r));
         }
         return a[v].left;
     }
-    size_t get_right(size_t v, size_t l, size_t r) {
+    [[gnu::always_inline]] size_t get_right(size_t v, size_t l, size_t r) {
         if (a[v].right == Node::null) {
             a[v].right = a.size();
             a.eb(init(l, r));
         }
         return a[v].right;
     }
-    size_t get_root() {
+    [[gnu::always_inline]] size_t get_root() {
         if (a.empty())
             a.eb(init(0, n));
         return 0;
@@ -775,26 +776,27 @@ struct ModInt {
         class = enable_if_t<sizeof(T) == sizeof(T2_), void>
     >
     constexpr ModInt(ModInt<T2_, mod, U2_> other): x(other.x) {}
-    [[nodiscard]] constexpr auto operator<=>(const ModInt&) const = default;
-    [[nodiscard]] constexpr ModInt operator+(ModInt other) const {
+    [[nodiscard, gnu::always_inline, gnu::pure]]
+    constexpr auto operator<=>(const ModInt&) const = default;
+    [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator+(ModInt other) const {
         using imm_type = conditional_t<U(mod) + U(mod) == U(mod + mod), T, U>;
         auto res = imm_type(x) + imm_type(other.x);
         res -= res >= mod ? mod : 0;
         return ModInt(res);
     }
-    constexpr ModInt &operator+=(ModInt other) {
+    [[gnu::always_inline]] constexpr ModInt &operator+=(ModInt other) {
         return *this = *this + other;
     }
-    [[nodiscard]] constexpr ModInt operator-() const {
+    [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator-() const {
         return ModInt(x ? mod - x : 0);
     }
-    [[nodiscard]] constexpr ModInt operator-(ModInt other) const {
+    [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator-(ModInt other) const {
         return *this + -other;
     }
     constexpr ModInt &operator-=(ModInt other) {
         return *this = *this - other;
     }
-    [[nodiscard]] constexpr ModInt operator*(ModInt other) const {
+    [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator*(ModInt other) const {
         using imm_type = conditional_t<U(mod) * U(mod) == U(mod * mod), T, U>;
         auto res = imm_type(x) * imm_type(other.x);
         return ModInt(res % mod);
@@ -803,7 +805,7 @@ struct ModInt {
         return *this = *this * other;
     }
     template<class Int>
-    [[nodiscard]] constexpr ModInt pow(Int p) const {
+    [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt pow(Int p) const {
         #ifdef NOGNU
         if constexpr (1)
         #else
@@ -822,10 +824,10 @@ struct ModInt {
             return __gnu_cxx::power(*this, p);
         }
     }
-    [[nodiscard]] constexpr ModInt inv() const {
+    [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt inv() const {
         return pow(mod - 2);
     }
-    [[nodiscard]] constexpr ModInt operator/(ModInt other) const {
+    [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator/(ModInt other) const {
         return *this * other.inv();
     }
     constexpr ModInt &operator/=(ModInt other) {
@@ -1029,26 +1031,26 @@ struct Point {
         y -= other.y;
         return *this;
     }
-    [[gnu::always_inline, nodiscard]] inline Point operator+(const Point &other) const {
+    [[gnu::always_inline, nodiscard, gnu::pure]] inline Point operator+(const Point &other) const {
         Point tmp = *this;
         tmp += other;
         return tmp;
     }
-    [[gnu::always_inline, nodiscard]] inline Point operator-(const Point &other) const {
+    [[gnu::always_inline, nodiscard, gnu::pure]] inline Point operator-(const Point &other) const {
         Point tmp = *this;
         tmp -= other;
         return tmp;
     }
-    [[gnu::always_inline, nodiscard]] inline T sqrlen() const {
+    [[gnu::always_inline, nodiscard, gnu::pure]] inline T sqrlen() const {
         return x * x + y * y;
     }
-    [[gnu::always_inline, nodiscard]] inline T operator*(const Point &other) const {
+    [[gnu::always_inline, nodiscard, gnu::pure]] inline T operator*(const Point &other) const {
         return x * other.x + y * other.y;
     }
-    [[gnu::always_inline, nodiscard]] inline T operator^(const Point &other) const {
+    [[gnu::always_inline, nodiscard, gnu::pure]] inline T operator^(const Point &other) const {
         return x * other.y - y * other.x;
     }
-    [[gnu::always_inline, nodiscard]] inline Point operator-() const {
+    [[gnu::always_inline, nodiscard, gnu::pure]] inline Point operator-() const {
         return Point(-x, -y);
     }
     inline Point &operator*=(T c) {
@@ -1061,28 +1063,28 @@ struct Point {
         y /= c;
         return *this;
     }
-    [[gnu::always_inline, nodiscard]] inline Point operator*(T c) const {
+    [[gnu::always_inline, nodiscard, gnu::pure]] inline Point operator*(T c) const {
         Point tmp = *this;
         tmp *= c;
         return tmp;
     }
-    [[gnu::always_inline, nodiscard]] inline Point operator/(T c) const {
+    [[gnu::always_inline, nodiscard, gnu::pure]] inline Point operator/(T c) const {
         Point tmp = *this;
         tmp /= c;
         return tmp;
     }
-    [[gnu::always_inline, nodiscard]] bool operator==(const Point &other) const {
+    [[gnu::always_inline, nodiscard, gnu::pure]] bool operator==(const Point &other) const {
         return eq(x, other.x) && eq(y, other.y);
     }
 };
 
 template<class T>
-[[gnu::always_inline, nodiscard]] T sqrdist(const Point<T> &a, const Point<T> &b) {
+[[gnu::always_inline, nodiscard, gnu::pure]] T sqrdist(const Point<T> &a, const Point<T> &b) {
     return (a - b).sqrlen();
 }
 
 template<class T1, class T2>
-[[gnu::always_inline, nodiscard]] double dist(const T1 &a, const T2 &b) {
+[[gnu::always_inline, nodiscard, gnu::pure]] double dist(const T1 &a, const T2 &b) {
     return sqrt(sqrdist(a, b));
 }
 
@@ -1107,18 +1109,18 @@ struct Line {
     T c;
     Line(T a = 1, T b = 0, T c = 0): a(a), b(b), c(c) {}
     Line(const Point<T> &p1, const Point<T> &p2): a(p2.y - p1.y), b(p1.x - p2.x), c(-(p1 * normal)) {}
-    [[gnu::always_inline, nodiscard]] bool operator==(const Line &other) const {
+    [[gnu::always_inline, nodiscard, gnu::pure]] bool operator==(const Line &other) const {
         return eq(c * sqrt(other.normal.sqrlen()), other.c * sqrt(normal.sqrlen()));
     }
 };
 
 template<class T>
-double dist(const Line<T> &l, const Point<T> &p) {
+[[gnu::always_inline, nodiscard, gnu::pure]] double dist(const Line<T> &l, const Point<T> &p) {
     return fabs((double) (l.normal * p + l.c) / sqrt(l.normal.sqrlen()));
 }
 
 template<class T>
-T dist_denomalized(const Line<T> &l, const Point<T> &p) {
+[[gnu::always_inline, nodiscard, gnu::pure]] T dist_denomalized(const Line<T> &l, const Point<T> &p) {
     return (l.normal * p + l.c);
 }
 
@@ -1133,12 +1135,12 @@ istream &operator>>(istream &in, Line<T> &l) {
 }
 
 template<class T>
-vector<Point<double>> intersect(const Line<T> &l1, const Line<T> &l2) {
+optional<vector<Point<double>>> intersect(const Line<T> &l1, const Line<T> &l2) {
     if (eq(l1.normal ^ l2.normal, (T) 0)) {
         if (l1 == l2) {
-            return vector<Point<double>>(2);
+            return nullopt;
         }
-        return {};
+        return vector<Point<double>>{};
     }
     if (eq(l2.a, (T) 0)) {
         return intersect(l2, l1);
@@ -1146,13 +1148,13 @@ vector<Point<double>> intersect(const Line<T> &l1, const Line<T> &l2) {
     if (eq(l1.a, (T) 0)) {
         double y = (double) -l1.c / l1.b;
         double x = (double) (-l2.b * y - l2.c) / l2.a;
-        return {Point(x, y)};
+        return vector{Point(x, y)};
     } else {
         double nb = l2.b - (double) l1.b * l2.a / l1.a;
         double nc = l2.c - (double) l1.c * l2.a / l1.a;
         double y = -nc / nb;
         double x = (double) (-l2.b * y - l2.c) / l2.a;
-        return {Point(x, y)};
+        return vector{Point(x, y)};
     }
 }
 
@@ -1160,16 +1162,17 @@ template<class T>
 struct Circle {
     Point<T> c;
     T r;
-    [[gnu::always_inline, nodiscard]] bool operator==(const Circle &other) const {
+    [[gnu::always_inline, nodiscard, gnu::pure]] bool operator==(const Circle &other) const {
         return c == other.c && eq(r, other.r);
     }
 };
 
 template<class T>
-[[gnu::always_inline, nodiscard]] vector<Point<double>> intersect(const Circle<T> &c, const Line<T> &l) {
+[[gnu::always_inline, nodiscard]]
+optional<vector<Point<double>>> intersect(const Circle<T> &c, const Line<T> &l) {
     double d = dist(l, c.c);
     if (d > c.r) {
-        return {};
+        return vector<Point<double>>{};
     } else {
         Point<double> dn = l.normal;
         if (dist_denomalized(l, c.c) > 0)
@@ -1184,17 +1187,18 @@ template<class T>
         dn /= sqrt(dn.sqrlen());
         dn *= sqrt(c.r * c.r - d * d);
         if (p + dn == p - dn) {
-            return {p + dn};
+            return vector{p + dn};
         } else {
-            return {p + dn, p - dn};
+            return vector{p + dn, p - dn};
         }
     }
 }
 
 template<class T>
-[[gnu::always_inline, nodiscard]] vector<Point<double>> intersect(Circle<T> c1, Circle<T> c2) {
+[[gnu::always_inline, nodiscard]]
+optional<vector<Point<double>>> intersect(Circle<T> c1, Circle<T> c2) {
     if (c1 == c2) {
-        return vector<Point<double>>(3);
+        return nullopt;
     }
     c2.c -= c1.c;
     auto ans = intersect(c2, Line<T>(-2 * c2.c.x, -2 * c2.c.y,
@@ -1242,7 +1246,7 @@ template<class T>
 }; // geometry
 
 template<class T, class V>
-[[gnu::always_inline, nodiscard]] inline auto &as_array(V &v) {
+[[gnu::always_inline, nodiscard, gnu::const]] inline auto &as_array(V &v) {
     using Arr = array<T, sizeof(V) / sizeof(T)>;
     return *reinterpret_cast<conditional_t<is_const_v<V>, const Arr, Arr> *>(&v);
 }
