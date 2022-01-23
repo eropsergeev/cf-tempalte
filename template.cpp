@@ -879,9 +879,9 @@ elementwise_operaton(F f, T1 x, const T2 &y, index_sequence<i...>)
 requires(is_tuple_like_v<T1> && !is_tuple_like_v<T2>)
 {
     if constexpr (tuple_size<T1>::value == 2)
-        return pair(f(get<i>(x), get<i>(y))...);
+        return pair(f(get<i>(x), y)...);
     else
-        return tuple(f(get<i>(x), get<i>(y))...);
+        return tuple(f(get<i>(x), y)...);
 }
 
 namespace std {
