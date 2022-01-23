@@ -24,7 +24,7 @@
     #include <ext/rope>
     #include <ext/pb_ds/assoc_container.hpp>
 #endif // NOGNU
-#define lambda(body, ...) [&](__VA_ARGS__) { return body; }
+#define lambda(body, ...) [&][[gnu::always_inline]](__VA_ARGS__) { return body; }
 #define vlambda(body, ...) lambda(body, __VA_ARGS__ __VA_OPT__(,) auto&&...)
 #define all(x) (x).begin(), (x).end()
 #define F first
