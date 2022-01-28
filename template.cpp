@@ -522,8 +522,11 @@ struct GetPolicy {
         template<class... Args>
         auto get_impl(size_t ql, size_t qr, size_t v, size_t l, size_t r, const Args&... args) {
             auto self = static_cast<Self *>(this);
-            if (qr <= l || r <= ql)
-                return policy.identity(args..., l, r);
+            if (qr <= l || r <= ql) {
+                return static_cast<
+                        decltype(policy.convert(self->get_val(self->a[v]), args..., l, r))
+                    >(policy.identity(args..., l, r));
+            }
             self->push(v, l, r);
             if (ql <= l && r <= qr)
                 return policy.convert(self->get_val(self->a[v]), args..., l, r);
@@ -569,7 +572,7 @@ struct MassUpdatePolicy {
             policy.balance(self->get_val(self->a[v]), l, r);
         }
         template<class... Args>
-        void mass_upd_impl(size_t ql, size_t qr, size_t v, size_t l, size_t r, Args&&... args) {
+        void mass_upd_impl(size_t ql, size_t qr, size_t v, size_t l, size_t r, const Args&... args) {
             auto self = static_cast<Self *>(this);
             if (qr <= l || r <= ql)
                 return;
@@ -586,7 +589,7 @@ struct MassUpdatePolicy {
             self->join(self->get_val(self->a[v]), self->get_val(self->a[left]), self->get_val(self->a[right]));
         }
         template<class... Args>
-        [[gnu::always_inline]] void mass_upd(size_t ql, size_t qr, Args&&... args) {
+        [[gnu::always_inline]] void mass_upd(size_t ql, size_t qr, const Args&... args) {
             auto self = static_cast<Self *>(this);
             mass_upd_impl(ql, qr, self->get_root(), 0, self->n, args...);
         }
@@ -621,7 +624,7 @@ struct BaseSegTree {
         return static_cast<typename P::template type<SegTree<T, Policies...>> &>(*this); \
     } \
     template<class... Args> \
-    [[gnu::always_inline]] void join(T &res, const T &a, const T &b, Args&&... args) { \
+    [[gnu::always_inline]] void join(T &res, const T &a, const T &b) { \
         constexpr auto max_prior = max({Policies<SegTree<T, Policies...>>::update_priority...}); \
         auto select = []<class X>(X x) { \
             if constexpr (X::update_priority >= max_prior) { \
@@ -632,7 +635,7 @@ struct BaseSegTree {
         }; \
         (assign_or_call( \
             static_cast<decltype(select(declval<Policies<SegTree<T, Policies...>>>())) *>(this)->join, \
-            res, a, b, args...), ...); \
+            res, a, b), ...); \
     } \
     [[gnu::always_inline]] auto init(size_t l, size_t r) { \
         constexpr int max_prior = max({Policies<SegTree<T, Policies...>>::init_priority...}); \
