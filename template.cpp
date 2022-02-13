@@ -34,6 +34,15 @@
 #define unires(x) x.resize(unique(all(x)) - x.begin())
 #define ll long long
 #define yesno(x) ((x) ? "YES" : "NO")
+#ifdef LOCAL
+    #define assume assert
+#else
+    #ifdef NOGNU
+        #define assume(...)
+    #else 
+        #define assume(...) if (!(__VA_ARGS__)) __builtin_unreachable()
+    #endif
+#endif
 
 using ld = long double;
 using pii = std::pair<int, int>;
@@ -520,26 +529,26 @@ struct GetPolicy {
             , SegTreeInitType<-1, identity_t, Self>(policy)
             , policy(policy) {}
         template<class... Args>
-        auto get_impl(size_t ql, size_t qr, size_t v, size_t l, size_t r, const Args&... args) {
+        auto get_impl(size_t ql, size_t qr, size_t v, size_t l, size_t r, Args&&... args) {
             auto self = static_cast<Self *>(this);
             if (qr <= l || r <= ql) {
                 return static_cast<
-                        decltype(policy.convert(self->get_val(self->a[v]), args..., l, r))
-                    >(policy.identity(args..., l, r));
+                        decltype(policy.convert(self->get_val(self->a[v]), forward<Args>(args)..., l, r))
+                    >(policy.identity(forward<Args>(args)..., l, r));
             }
             self->push(v, l, r);
             if (ql <= l && r <= qr)
-                return policy.convert(self->get_val(self->a[v]), args..., l, r);
+                return policy.convert(self->get_val(self->a[v]), forward<Args>(args)..., l, r);
             size_t c = (l + r) / 2;
             return policy.join(
-                get_impl(ql, qr, self->get_left(v, l, r), l, c, args...),
-                get_impl(ql, qr, self->get_right(v, l, r), c, r, args...),
-                args..., l, r);
+                get_impl(ql, qr, self->get_left(v, l, r), l, c, forward<Args>(args)...),
+                get_impl(ql, qr, self->get_right(v, l, r), c, r, forward<Args>(args)...),
+                forward<Args>(args)..., l, r);
         }
         template<class... Args>
-        [[gnu::always_inline]] auto get(size_t ql, size_t qr, const Args&... args) {
+        [[gnu::always_inline]] auto get(size_t ql, size_t qr, Args&&... args) {
             auto self = static_cast<Self *>(this);
-            return get_impl(ql, qr, self->get_root(), 0, self->n, args...);
+            return get_impl(ql, qr, self->get_root(), 0, self->n, forward<Args>(args)...);
         }
         [[gnu::always_inline]] void push(size_t, size_t, size_t) {}
     };
@@ -572,26 +581,26 @@ struct MassUpdatePolicy {
             policy.balance(self->get_val(self->a[v]), l, r);
         }
         template<class... Args>
-        void mass_upd_impl(size_t ql, size_t qr, size_t v, size_t l, size_t r, const Args&... args) {
+        void mass_upd_impl(size_t ql, size_t qr, size_t v, size_t l, size_t r, Args&&... args) {
             auto self = static_cast<Self *>(this);
             if (qr <= l || r <= ql)
                 return;
             self->push(v, l, r);
             if (ql <= l && r <= qr) {
-                policy.calc(self->get_val(self->a[v]), args..., l, r);
+                policy.calc(self->get_val(self->a[v]), forward<Args>(args)..., l, r);
                 return;
             }
             size_t c = (l + r) / 2;
-            mass_upd_impl(ql, qr, self->get_left(v, l, r), l, c, args...);
-            mass_upd_impl(ql, qr, self->get_right(v, l, r), c, r, args...);
+            mass_upd_impl(ql, qr, self->get_left(v, l, r), l, c, forward<Args>(args)...);
+            mass_upd_impl(ql, qr, self->get_right(v, l, r), c, r, forward<Args>(args)...);
             auto left = self->get_left(v, l, r);
             auto right = self->get_right(v, l, r);
             self->join(self->get_val(self->a[v]), self->get_val(self->a[left]), self->get_val(self->a[right]));
         }
         template<class... Args>
-        [[gnu::always_inline]] void mass_upd(size_t ql, size_t qr, const Args&... args) {
+        [[gnu::always_inline]] void mass_upd(size_t ql, size_t qr, Args&&... args) {
             auto self = static_cast<Self *>(this);
-            mass_upd_impl(ql, qr, self->get_root(), 0, self->n, args...);
+            mass_upd_impl(ql, qr, self->get_root(), 0, self->n, forward<Args>(args)...);
         }
     };
 };
@@ -643,7 +652,7 @@ struct BaseSegTree {
             if constexpr (X::init_priority >= max_prior) { \
                 return x; \
             } else { \
-                return select(select, args...); \
+                return select(select, forward<Args>(args)...); \
             } \
         }; \
         return decltype(select(select, declval<Policies<SegTree<T, Policies...>>>()...))::init(l, r); \
