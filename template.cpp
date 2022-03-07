@@ -777,7 +777,7 @@ struct ModInt {
     using T = make_unsigned_t<T_>;
     using U = make_unsigned_t<U_>;
     static_assert(sizeof(U) > sizeof(T));
-    T x;
+    T x{};
     constexpr ModInt() {}
     constexpr ModInt(T x): x(x) {}
     template<
