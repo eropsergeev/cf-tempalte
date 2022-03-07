@@ -434,26 +434,24 @@ struct SegTreeInitType {
     template<class Policy>
     SegTreeInitType(Policy policy): gen(policy.template get<gen_t>()) {}
     void build(size_t v, size_t l, size_t r) {
-        auto self = static_cast<Self *>(this);
-        if constexpr (!is_invocable_v<gen_t, size_t>) {
-            self->get_val(self->a[v]) = init(l, r);
-        }
+        auto self = static_cast<Self *>(this); 
         if (r - l == 1) {
-            if constexpr (is_invocable_v<gen_t, size_t> && !is_invocable_v<gen_t, size_t,  size_t>) {
+            if constexpr (!is_invocable_v<gen_t, size_t, size_t>)
                 self->get_val(self->a[v]) = gen(l);
-            }
         } else {
             size_t c = (l + r) / 2;
             auto left = self->get_left(v, l, r);
             auto right = self->get_right(v, l, r);
             build(left, l, c);
             build(right, c, r);
-            if constexpr (is_invocable_v<gen_t, size_t>) {
+            if constexpr (!is_invocable_v<gen_t, size_t, size_t>)
                 self->join(
                     self->get_val(self->a[v]),
                     self->get_val(self->a[left]),
                     self->get_val(self->a[right]));
-            }
+        }
+        if constexpr (is_invocable_v<gen_t, size_t, size_t>) {
+            self->get_val(self->a[v]) = init(l, r);
         }
     }
     [[gnu::always_inline]] void init() {
@@ -817,7 +815,7 @@ struct ModInt {
         return *this = *this * other;
     }
     template<class Int>
-    [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt pow(Int p) const {
+    [[nodiscard, gnu::pure]] constexpr ModInt pow(Int p) const {
         #ifdef NOGNU
         if constexpr (1)
         #else
