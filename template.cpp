@@ -778,16 +778,16 @@ struct ModInt {
     using U = make_unsigned_t<U_>;
     static_assert(sizeof(U) > sizeof(T));
     T x{};
-    constexpr ModInt() {}
-    constexpr ModInt(T x): x(x) {}
+    [[gnu::always_inline]] constexpr ModInt() {}
+    [[gnu::always_inline]] constexpr ModInt(T x): x(x) {}
     template<
         class T2_,
         class U2_,
         class = enable_if_t<sizeof(T) == sizeof(T2_), void>
     >
-    constexpr ModInt(ModInt<T2_, mod, U2_> other): x(other.x) {}
+    [[gnu::always_inline]] constexpr ModInt(ModInt<T2_, mod, U2_> other): x(other.x) {}
     [[nodiscard, gnu::always_inline, gnu::pure]]
-    constexpr auto operator<=>(const ModInt&) const = default;
+    [[gnu::always_inline]] constexpr auto operator<=>(const ModInt&) const = default;
     [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator+(ModInt other) const {
         using imm_type = conditional_t<U(mod) + U(mod) == U(mod + mod), T, U>;
         auto res = imm_type(x) + imm_type(other.x);
@@ -803,7 +803,7 @@ struct ModInt {
     [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator-(ModInt other) const {
         return *this + -other;
     }
-    constexpr ModInt &operator-=(ModInt other) {
+    [[gnu::always_inline]] constexpr ModInt &operator-=(ModInt other) {
         return *this = *this - other;
     }
     [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator*(ModInt other) const {
@@ -811,25 +811,26 @@ struct ModInt {
         auto res = imm_type(x) * imm_type(other.x);
         return ModInt(res % mod);
     }
-    constexpr ModInt &operator*=(ModInt other) {
+    [[gnu::always_inline]] constexpr ModInt &operator*=(ModInt other) {
         return *this = *this * other;
     }
     template<class Int>
-    [[nodiscard, gnu::pure]] constexpr ModInt pow(Int p) const {
+    [[nodiscard, gnu::pure, gnu::always_inline]] constexpr ModInt pow(Int p) const {
         #ifdef NOGNU
         if constexpr (1)
         #else
         if (is_constant_evaluated())
         #endif
         {
-            if (!p) {
-                return 1;
-            } else if (p & 1) {
-                return *this * pow(p - 1);
-            } else {
-                auto t = pow(p >> 1);
-                return t * t;
+            ModInt x = *this;
+            ModInt ans = 1;
+            while (p) {
+                if (p & 1)
+                    ans *= x;
+                x *= x;
+                p >>= 1;
             }
+            return ans;
         } else {
             return __gnu_cxx::power(*this, p);
         }
@@ -840,7 +841,7 @@ struct ModInt {
     [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator/(ModInt other) const {
         return *this * other.inv();
     }
-    constexpr ModInt &operator/=(ModInt other) {
+    [[gnu::always_inline]] constexpr ModInt &operator/=(ModInt other) {
         return *this = *this / other;
     }
 };
