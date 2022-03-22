@@ -284,6 +284,11 @@ operator<<(ostream &out, const T &x) {
 
 };
 
+template<std::integral Int>
+[[gnu::always_inline]] inline auto range(Int n) {
+    return views::iota(static_cast<Int>(0), n);
+}
+
 template<class T, class... Ts, class... Args>
 [[gnu::always_inline]] inline auto input(Args&&... args) {
     if constexpr (sizeof...(Ts) == 0) {
@@ -1282,6 +1287,10 @@ template<class V, bool allgined = false, class T = int>
     } else {
         static_assert(is_void_v<V>);
     }
+}
+
+void print() {
+    cout << endl;
 }
 
 template<class T>
