@@ -85,6 +85,7 @@ const ld EPS = 1e-8;
 #endif // M_PI
 
 using namespace std;
+namespace rng = std::ranges;
 
 #ifndef NOGNU
     using namespace __gnu_cxx;
@@ -1322,5 +1323,5 @@ void prints(const T &x, const Args & ...args) {
 // using namespace geometry;
 
 void run() {
-    
+
 }
