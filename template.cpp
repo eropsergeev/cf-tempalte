@@ -198,16 +198,21 @@ inline constexpr bool is_tuple_like_v = is_tuple_like<T>::value;
 template<class T>
 concept tuple_like = is_tuple_like_v<T>;
 
+template<class Stream>
+struct StreamWrapper {
+    Stream &stream;
+    [[gnu::always_inline]] StreamWrapper(Stream &stream): stream(stream) {}
+    [[gnu::always_inline]] operator Stream&() const {
+        return stream;
+    }
+};
+
 namespace std {
 
 template<std::ranges::range T>
-[[gnu::always_inline]] inline
-enable_if_t<!is_same_v<T, string> && !is_array_v<T>
-#ifndef NOGNU
-    && !is_same_v<T, rope<char>>
-#endif
-, ostream> &
-operator<<(ostream &out, const T &arr) {
+requires(!tuple_like<T>)
+[[gnu::always_inline]] inline ostream &operator<<(StreamWrapper<ostream> wout, const T &arr) {
+    auto &out = wout.stream;
     bool first = 1;
     for (auto &&x : arr) {
         if (!first) {
@@ -228,13 +233,9 @@ operator<<(ostream &out, const T &arr) {
 }
 
 template<std::ranges::range T>
-[[gnu::always_inline]] inline 
-enable_if_t<!is_same_v<T, string> && !is_array_v<T>
-#ifndef NOGNU
-    && !is_same_v<T, rope<char>>
-#endif
-, istream>&
-operator>>(istream &in, T &arr) {
+requires(!tuple_like<T>)
+[[gnu::always_inline]] inline istream &operator>>(StreamWrapper<istream> win, T &arr) {
+    auto &in = win.stream;
     for (auto &x : arr)
         in >> x;
     return in;
@@ -266,18 +267,14 @@ template<class T, size_t pos>
 
 namespace std {
 
-template<class T, size_t pos = 0>
-[[gnu::always_inline]] inline 
-enable_if_t<is_tuple_like_v<T> && !std::ranges::range<T>, istream>&
-operator>>(istream &in, T &x) {
+template<tuple_like T>
+[[gnu::always_inline]] inline istream &operator>>(StreamWrapper<istream> in, T &x) {
     read_tuple<T, 0>(in, x);
     return in;
 }
 
-template<class T>
-[[gnu::always_inline]] inline 
-enable_if_t<is_tuple_like_v<T> && !std::ranges::range<T>, ostream>&
-operator<<(ostream &out, const T &x) {
+template<tuple_like T>
+[[gnu::always_inline]] inline ostream &operator<<(StreamWrapper<ostream> out, const T &x) {
     write_tuple<T, 0>(out, x);
     return out;
 }
@@ -1332,5 +1329,5 @@ void prints(const T &x, const Args & ...args) {
 // using namespace geometry;
 
 void run() {
-
+    
 }
