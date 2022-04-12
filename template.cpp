@@ -1286,19 +1286,24 @@ template<class V, bool allgined = false, class T = int>
     }
 }
 
+template<bool flush = false>
 void print() {
-    cout << endl;
+    if constexpr (flush)
+        cout << endl;
+    else
+        cout << '\n';
 }
 
-template<class T>
+template<bool flush = false, class T>
 void print(const T &x) {
-    cout << x << endl;
+    cout << x;
+    print<flush>();
 }
 
-template<class T, class... Args>
+template<bool flush = false, class T, class... Args>
 void print(const T &x, const Args & ...args) {
     cout << x << " ";
-    print(args...);
+    print<flush>(args...);
 }
 
 template<class T>
@@ -1319,7 +1324,7 @@ void prints(const T &x, const Args & ...args) {
 #define debug(...)
 #define debugs(...)
 #else
-#define debug print
+#define debug print<true>
 #define debugs prints
 #endif
 
