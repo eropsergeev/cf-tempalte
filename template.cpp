@@ -775,7 +775,10 @@ struct make_unsigned<unsigned __int128> {
 
 #endif
 
-template<class T_ = int, make_unsigned_t<T_> mod = M, class U_ = ll>
+template<class T, auto c>
+constexpr T const_in_type = c;
+
+template<class T_ = int, auto &mod = const_in_type<make_unsigned_t<T_>, M>, class U_ = ll>
 struct ModInt {
     using T = make_unsigned_t<T_>;
     using U = make_unsigned_t<U_>;
@@ -792,7 +795,13 @@ struct ModInt {
     [[nodiscard, gnu::always_inline, gnu::pure]]
     [[gnu::always_inline]] constexpr auto operator<=>(const ModInt&) const = default;
     [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator+(ModInt other) const {
-        using imm_type = conditional_t<U(mod) + U(mod) == U(mod + mod), T, U>;
+        auto selector = []() {
+            if constexpr (__builtin_constant_p(mod))
+                return conditional_t<U(mod) + U(mod) == U(mod + mod), T, U>{};
+            else
+                return U{};
+        };
+        using imm_type = decltype(selector());
         auto res = imm_type(x) + imm_type(other.x);
         res -= res >= mod ? mod : 0;
         return ModInt(res);
@@ -810,7 +819,13 @@ struct ModInt {
         return *this = *this - other;
     }
     [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator*(ModInt other) const {
-        using imm_type = conditional_t<U(mod) * U(mod) == U(mod * mod), T, U>;
+        auto selector = []() {
+            if constexpr (__builtin_constant_p(mod))
+                return conditional_t<U(mod) * U(mod) == U(mod * mod), T, U>{};
+            else
+                return U{};
+        };
+        using imm_type = decltype(selector());
         auto res = imm_type(x) * imm_type(other.x);
         return ModInt(res % mod);
     }
@@ -1004,12 +1019,12 @@ operator/(const T2 &y, T1 x) {
     return x;
 }
 
-template<class T, make_unsigned_t<T> mod, class U>
+template<class T, auto &mod, class U>
 ostream &operator<<(ostream &out, ModInt<T, mod, U> v) {
     return out << v.x;
 }
 
-template<class T, make_unsigned_t<T> mod, class U>
+template<class T, auto &mod, class U>
 istream &operator>>(istream &in, ModInt<T, mod, U> &v) {
     return in >> v.x;
 }
