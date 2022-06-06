@@ -5,6 +5,7 @@
 //#define NOGNU
 #ifndef LOCAL
     #pragma GCC optimize("Ofast")
+    #pragma GCC optimize("no-stack-protector")
 #endif
 #pragma GCC target("avx2")
 // #pragma GCC target("sse4")
@@ -26,6 +27,8 @@
 #endif // NOGNU
 #define lambda(body, ...) [&][[gnu::always_inline]](__VA_ARGS__) { return body; }
 #define vlambda(body, ...) lambda(body, __VA_ARGS__ __VA_OPT__(,) auto&&...)
+#define trans(...) views::transform(lambda(__VA_ARGS__))
+#define vtrans(...) views::transform(vlambda(__VA_ARGS__))
 #define all(x) (x).begin(), (x).end()
 #define F first
 #define S second
