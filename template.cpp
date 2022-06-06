@@ -856,8 +856,23 @@ struct ModInt {
             return __gnu_cxx::power(*this, p);
         }
     }
+    template<auto p>
+    [[nodiscard, gnu::pure, gnu::always_inline]] constexpr ModInt pow() const {
+        static_assert(is_integral_v<decltype(p)> && p >= 0);
+        if constexpr (p == 0) {
+            return {1};
+        } else if constexpr (p % 2) {
+            return *this * pow<p - 1>();
+        } else {
+            auto t = pow<p / 2>();
+            return t * t;
+        }
+    }
     [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt inv() const {
-        return pow(mod - 2);
+        if constexpr (__builtin_constant_p(mod))
+            return pow<mod - 2>();
+        else
+            return pow(mod - 2);
     }
     [[nodiscard, gnu::always_inline, gnu::pure]] constexpr ModInt operator/(ModInt other) const {
         return *this * other.inv();
