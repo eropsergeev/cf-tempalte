@@ -110,9 +110,9 @@ struct Inf {
     [[nodiscard, gnu::pure]] constexpr operator T() const {
         if constexpr (is_floating_point_v<T>) {
             if constexpr (neg) {
-                return -numeric_limits<T>::infinity;
+                return -numeric_limits<T>::infinity();
             } else {
-                return numeric_limits<T>::infinity;
+                return numeric_limits<T>::infinity();
             }
         } else if constexpr (neg) {
             static_assert(is_signed_v<T>);
@@ -141,7 +141,7 @@ struct Inf {
 Inf<0> inf;
 
 template<class T1, class T2>
-[[gnu::always_inline]] inline bool mini(T1 &a, T2 &&b) {
+[[gnu::always_inline]] inline bool mini(T1 &&a, T2 &&b) {
     if (a > b) {
         a = b;
         return 1;
@@ -150,7 +150,7 @@ template<class T1, class T2>
 }
 
 template<class T1, class T2>
-[[gnu::always_inline]] inline bool maxi(T1 &a, T2 &&b) {
+[[gnu::always_inline]] inline bool maxi(T1 &&a, T2 &&b) {
     if (a < b) {
         a = b;
         return 1;
