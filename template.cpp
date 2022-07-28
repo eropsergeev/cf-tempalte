@@ -108,13 +108,8 @@ struct Inf {
     constexpr Inf() {}
     template<class T>
     [[nodiscard, gnu::pure]] constexpr operator T() const {
-        if constexpr (is_floating_point_v<T>) {
-            if constexpr (neg) {
-                return -numeric_limits<T>::infinity();
-            } else {
-                return numeric_limits<T>::infinity();
-            }
-        } else if constexpr (neg) {
+        // No infinity for fast-math
+        if constexpr (neg) {
             static_assert(is_signed_v<T>);
             return numeric_limits<T>::min() / 2;
         } else {
