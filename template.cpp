@@ -163,8 +163,8 @@ signed main() {
     ios::sync_with_stdio(0);
     cin.tie(0);
     cout.tie(0);
-    _mm_setcsr(_mm_getcsr() & ~(0x0080 | 0x0200));
     #ifndef LOCAL
+    _mm_setcsr(_mm_getcsr() & ~(0x0080 | 0x0200));
     rnd.seed(random_device{}());
     #endif
     cout << setprecision(11) << fixed;
@@ -208,7 +208,6 @@ struct StreamWrapper {
 namespace std {
 
 template<std::ranges::range T>
-requires(!tuple_like<T>)
 [[gnu::always_inline]] inline ostream &operator<<(StreamWrapper<ostream> wout, const T &arr) {
     auto &out = wout.stream;
     bool first = 1;
@@ -231,7 +230,6 @@ requires(!tuple_like<T>)
 }
 
 template<std::ranges::range T>
-requires(!tuple_like<T>)
 [[gnu::always_inline]] inline istream &operator>>(StreamWrapper<istream> win, T &arr) {
     auto &in = win.stream;
     for (auto &x : arr)
@@ -266,12 +264,14 @@ template<class T, size_t pos>
 namespace std {
 
 template<tuple_like T>
+requires(!std::ranges::range<T>)
 [[gnu::always_inline]] inline istream &operator>>(StreamWrapper<istream> in, T &x) {
     read_tuple<T, 0>(in, x);
     return in;
 }
 
 template<tuple_like T>
+requires(!std::ranges::range<T>)
 [[gnu::always_inline]] inline ostream &operator<<(StreamWrapper<ostream> out, const T &x) {
     write_tuple<T, 0>(out, x);
     return out;
