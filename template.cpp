@@ -81,7 +81,6 @@ using u_max = u64;
 #endif
 
 const unsigned ll M1 = 4294967291, M2 = 4294967279, M = 998244353;
-const ld EPS = 1e-8;
 
 #ifndef M_PI
     const ld M_PI = acos(-1);
@@ -1046,101 +1045,152 @@ istream &operator>>(istream &in, ModInt<T, mod, U> &v) {
 
 namespace geometry {
 
-template<class T>
-bool eq(T a, T b) {
-    if constexpr (is_floating_point<T>()) {
-        return fabs(a - b) < EPS;
-    } else {
-        return a == b;
-    }
+template<class T1, class T2, class T3>
+[[nodiscard, gnu::always_inline, gnu::const]] inline bool near(T1 x, T2 y, T3 eps) {
+    return abs(x - y) <= eps;
 }
 
-template<class T>
+template <class T>
 struct Point {
     T x, y;
-    Point(T x = 0, T y = 0): x(x), y(y) {}
-    template<class U>
-    inline operator Point<U>() const {
-        return Point<U>(x, y);
+    template <class U, std::enable_if_t<!std::is_same_v<U, std::common_type_t<T, U>>, bool> = true>
+    [[gnu::always_inline]] explicit operator Point<U>() const noexcept {
+        return Point<U>{static_cast<U>(x), static_cast<U>(y)};
     }
-    inline Point &operator+=(const Point &other) {
+    template <class U, std::enable_if_t<std::is_same_v<U, std::common_type_t<T, U>>, bool> = true>
+    [[gnu::always_inline]] operator Point<U>() const noexcept {
+        return Point<U>{static_cast<U>(x), static_cast<U>(y)};
+    }
+    [[gnu::always_inline]] Point() = default;
+    [[gnu::always_inline]] Point(T x, T y) : x(x), y(y) {}
+    [[gnu::always_inline]] explicit Point(double radians): x(std::cos(radians)), y(std::sin(radians)) {}
+    template <class V>
+    [[gnu::always_inline]] explicit Point(const V& v) noexcept : x(v.x), y(v.y) {}
+    [[gnu::always_inline]] Point& operator+=(const Point& other) {
         x += other.x;
         y += other.y;
         return *this;
     }
-    inline Point &operator-=(const Point &other) {
+    [[gnu::always_inline]] Point& operator-=(const Point& other) {
         x -= other.x;
         y -= other.y;
         return *this;
     }
-    [[gnu::always_inline, nodiscard, gnu::pure]] inline Point operator+(const Point &other) const {
-        Point tmp = *this;
-        tmp += other;
-        return tmp;
+    template <class U>
+    [[gnu::always_inline, nodiscard, gnu::pure]] Point<std::common_type_t<T, U>> operator+(
+        const Point<U>& other) const noexcept {
+        return {x + other.x, y + other.y};
     }
-    [[gnu::always_inline, nodiscard, gnu::pure]] inline Point operator-(const Point &other) const {
-        Point tmp = *this;
-        tmp -= other;
-        return tmp;
+    template <class U>
+    [[gnu::always_inline, nodiscard, gnu::pure]] Point<std::common_type_t<T, U>> operator-(
+        const Point<U>& other) const noexcept {
+        return {x - other.x, y - other.y};
     }
-    [[gnu::always_inline, nodiscard, gnu::pure]] inline T sqrlen() const {
-        return x * x + y * y;
+    [[gnu::always_inline, nodiscard, gnu::pure]] T lenSq() const noexcept { return x * x + y * y; }
+    [[gnu::always_inline, nodiscard, gnu::pure]] auto len() const noexcept {
+        return std::sqrt(lenSq());
     }
-    [[gnu::always_inline, nodiscard, gnu::pure]] inline T operator*(const Point &other) const {
-        return x * other.x + y * other.y;
+    [[gnu::always_inline, nodiscard, gnu::pure]] Point operator-() const noexcept {
+        return Point{-x, -y};
     }
-    [[gnu::always_inline, nodiscard, gnu::pure]] inline T operator^(const Point &other) const {
-        return x * other.y - y * other.x;
-    }
-    [[gnu::always_inline, nodiscard, gnu::pure]] inline Point operator-() const {
-        return Point(-x, -y);
-    }
-    inline Point &operator*=(T c) {
+    [[gnu::always_inline]] Point& operator*=(T c) {
         x *= c;
         y *= c;
         return *this;
     }
-    inline Point &operator/=(T c) {
+    template <class Dummy = T, std::enable_if_t<std::is_floating_point_v<Dummy>, bool> = true>
+    [[gnu::always_inline]] Point& operator/=(T c) {
         x /= c;
         y /= c;
         return *this;
     }
-    [[gnu::always_inline, nodiscard, gnu::pure]] inline Point operator*(T c) const {
-        Point tmp = *this;
-        tmp *= c;
-        return tmp;
+    template <class U>
+    [[gnu::always_inline, nodiscard, gnu::pure]] auto rotate(U radians) const {
+        using Ret = std::conditional_t<std::is_floating_point_v<T>, T, double>;
+        using Ang = std::common_type_t<Ret, U>;
+        auto sn = std::sin(static_cast<Ang>(radians));
+        auto cs = std::cos(static_cast<Ang>(radians));
+        return Point<Ret>{x * cs - y * sn, x * sn + y * cs};
     }
-    [[gnu::always_inline, nodiscard, gnu::pure]] inline Point operator/(T c) const {
-        Point tmp = *this;
-        tmp /= c;
-        return tmp;
+    [[gnu::always_inline, nodiscard, gnu::pure]] Point left() const noexcept {
+        Point ans = *this;
+        std::swap(ans.x, ans.y);
+        ans.x = -ans.x;
+        return ans;
     }
-    [[gnu::always_inline, nodiscard, gnu::pure]] bool operator==(const Point &other) const {
-        return eq(x, other.x) && eq(y, other.y);
+    [[gnu::always_inline, nodiscard, gnu::pure]] Point right() const noexcept {
+        Point ans = *this;
+        std::swap(ans.x, ans.y);
+        ans.y = -ans.y;
+        return ans;
+    }
+    [[gnu::always_inline, nodiscard, gnu::pure]] auto radians() const { return std::atan2(y, x); }
+    [[gnu::always_inline, nodiscard, gnu::pure]] bool operator==(const Point& other) const noexcept {
+        return x == other.x && y == other.y;
     }
 };
 
-template<class T>
-[[gnu::always_inline, nodiscard, gnu::pure]] T sqrdist(const Point<T> &a, const Point<T> &b) {
-    return (a - b).sqrlen();
+template <class T1, class T2>
+[[gnu::always_inline, nodiscard, gnu::pure]] inline Point<std::common_type_t<T1, T2>> operator*(
+    const Point<T1>& v, T2 c) noexcept {
+    return {v.x * c, v.y * c};
 }
 
-template<class T1, class T2>
-[[gnu::always_inline, nodiscard, gnu::pure]] double dist(const T1 &a, const T2 &b) {
-    return sqrt(sqrdist(a, b));
+template <class T1, class T2>
+[[gnu::always_inline, nodiscard, gnu::pure]] inline auto operator*(T2 c,
+                                                                   const Point<T1>& v) noexcept {
+    return v * c;
+}
+
+template <class T1, class T2>
+[[gnu::always_inline, nodiscard, gnu::pure]] inline auto operator/(const Point<T1>& v,
+                                                                   T2 c) noexcept {
+    using Ret = std::conditional_t<std::is_integral_v<T1> && std::is_integral_v<T2>,
+                                   double,
+                                   std::common_type_t<T1, T2>>;
+    return Point<Ret>{static_cast<Ret>(v.x) / c, static_cast<Ret>(v.y) / c};
+}
+
+template <class T1, class T2, class T3>
+[[gnu::always_inline, nodiscard, gnu::pure]] inline bool near(const Point<T1>& a, const Point<T2>& b,
+                                                              T3 eps) noexcept {
+    return near(a.x, b.x, eps) && near(a.y, b.y, eps);
+}
+
+template <class T1, class T2>
+[[gnu::always_inline, nodiscard, gnu::pure]] inline auto operator*(const Point<T1>& a,
+                                                             const Point<T2>& b) noexcept {
+    return a.x * b.x + a.y * b.y;
+}
+
+template <class T1, class T2>
+[[gnu::always_inline, nodiscard, gnu::pure]] inline auto operator^(const Point<T1>& a,
+                                                               const Point<T2>& b) noexcept {
+    return a.x * b.y - a.y * b.x;
+}
+
+template <class T1, class T2>
+[[gnu::always_inline, nodiscard, gnu::pure]] inline auto distSq(const Point<T1> &a,
+                                                                const Point<T2> &b) noexcept {
+    return (a - b).lenSq();
+}
+
+template <std::floating_point Ret = double, class T1 = void, class T2 = void>
+[[gnu::always_inline, nodiscard, gnu::pure]] inline auto dist(const T1 &a, const T2 &b) {
+    return std::sqrt((Ret) distSq(a, b));
+}
+
+template <class T>
+[[gnu::always_inline]] inline std::ostream& operator<<(std::ostream& out, const Point<T>& v) {
+    return out << v.x << " " << v.y;
 }
 
 template<class T>
-ostream &operator<<(ostream &out, const Point<T> &p) {
-    return out << p.x << " " << p.y;
-}
-
-template<class T>
-istream &operator>>(istream &in, Point<T> &p) {
+[[gnu::always_inline]] inline istream &operator>>(istream &in, Point<T> &p) {
     return in >> p.x >> p.y;
 }
 
-template<class T>
+template <class T>
 struct Line {
     union {
         struct {
@@ -1149,53 +1199,81 @@ struct Line {
         Point<T> normal;
     };
     T c;
-    Line(T a = 1, T b = 0, T c = 0): a(a), b(b), c(c) {}
-    Line(const Point<T> &p1, const Point<T> &p2): a(p2.y - p1.y), b(p1.x - p2.x), c(-(p1 * normal)) {}
-    [[gnu::always_inline, nodiscard, gnu::pure]] bool operator==(const Line &other) const {
-        return eq(c * sqrt(other.normal.sqrlen()), other.c * sqrt(normal.sqrlen()));
+
+    [[gnu::always_inline]] Line(T a = 1, T b = 0, T c = 0) : a(a), b(b), c(c) {}
+    [[gnu::always_inline]] Line(const Point<T> &norm, T c) : normal(norm), c(c) {}
+
+    template<class U>
+    Line(const Line<U> &other): normal(other.normal), c(other.c) {}
+
+    [[gnu::always_inline, nodiscard, gnu::pure]] static Line fromTwoPoints(
+        const Point<T>& p1, const Point<T>& p2) noexcept {
+        Point<T> norm{p2.y - p1.y, p1.x - p2.x};
+        return Line(norm, -(p1 * norm));
+    }
+
+    [[gnu::always_inline, nodiscard, gnu::pure]] static Line fromPointAndNormal(
+        const Point<T>& p1, const Point<T>& norm) noexcept {
+        return Line(norm, -(p1 * norm));
+    }
+
+    [[gnu::always_inline, nodiscard, gnu::pure]] static Line fromPointAndCollinear(
+        const Point<T>& p1, const Point<T>& coll) noexcept {
+        Point<T> norm{coll.y, -coll.x};
+        return Line(norm, -(p1 * norm));
+    }
+    [[gnu::always_inline, nodiscard, gnu::pure]] bool operator==(const Line& other) const noexcept {
+        return normal * other.c == other.normal * c;
     }
 };
 
-template<class T>
-[[gnu::always_inline, nodiscard, gnu::pure]] double dist(const Line<T> &l, const Point<T> &p) {
-    return fabs((double) (l.normal * p + l.c) / sqrt(l.normal.sqrlen()));
+template <class T1, class T2, class T3>
+[[gnu::always_inline, nodiscard, gnu::pure]] inline bool near(const Line<T1>& a, const Line<T2>& b,
+                                                              T3 eps) noexcept {
+    return near(a.normal * b.c, b.normal * a.c, eps);
 }
 
-template<class T>
-[[gnu::always_inline, nodiscard, gnu::pure]] T dist_denomalized(const Line<T> &l, const Point<T> &p) {
+template<floating_point Ret = double, class T = void>
+[[gnu::always_inline, nodiscard, gnu::pure]] Ret dist(const Line<T> &l, const Point<T> &p) {
+    return abs((Ret) (l.normal * p + l.c) / sqrt((Ret) l.normal.sqrlen()));
+}
+
+template<class T1, class T2>
+[[gnu::always_inline, nodiscard, gnu::pure]] inline std::common_type_t<T1, T2> dist_denomalized(const Line<T1> &l, const Point<T2> &p) {
     return (l.normal * p + l.c);
 }
 
 template<class T>
-ostream &operator<<(ostream &out, const Line<T> &l) {
+[[gnu::always_inline]] inline ostream &operator<<(ostream &out, const Line<T> &l) {
     return out << l.a << " " << l.b << " " << l.c;
 }
 
 template<class T>
-istream &operator>>(istream &in, Line<T> &l) {
+[[gnu::always_inline]] inline istream &operator>>(istream &in, Line<T> &l) {
     return in >> l.a >> l.b >> l.c;
 }
 
-template<class T>
-optional<vector<Point<double>>> intersect(const Line<T> &l1, const Line<T> &l2) {
-    if (eq(l1.normal ^ l2.normal, (T) 0)) {
+template<std::floating_point Ret = double, class T1 = void, class T2 = void, class T3 = int>
+[[gnu::always_inline, nodiscard, gnu::pure]]
+inline optional<vector<Point<Ret>>> intersect(const Line<T1> &l1, const Line<T2> &l2, T3 eps = 0) noexcept {
+    if (near(l1.normal ^ l2.normal, 0, eps)) {
         if (l1 == l2) {
             return nullopt;
         }
-        return vector<Point<double>>{};
+        return vector<Point<Ret>>{};
     }
-    if (eq(l2.a, (T) 0)) {
-        return intersect(l2, l1);
+    if (near(l2.a, 0, eps)) {
+        return intersect<Ret>(l2, l1, eps);
     }
-    if (eq(l1.a, (T) 0)) {
-        double y = (double) -l1.c / l1.b;
-        double x = (double) (-l2.b * y - l2.c) / l2.a;
+    if (near(l1.a, 0, eps)) {
+        Ret y = (Ret) -l1.c / l1.b;
+        Ret x = (Ret) (-l2.b * y - l2.c) / l2.a;
         return vector{Point(x, y)};
     } else {
-        double nb = l2.b - (double) l1.b * l2.a / l1.a;
-        double nc = l2.c - (double) l1.c * l2.a / l1.a;
-        double y = -nc / nb;
-        double x = (double) (-l2.b * y - l2.c) / l2.a;
+        Ret nb = l2.b - (Ret) l1.b * l2.a / l1.a;
+        Ret nc = l2.c - (Ret) l1.c * l2.a / l1.a;
+        Ret y = -nc / nb;
+        Ret x = (Ret) (-l2.b * y - l2.c) / l2.a;
         return vector{Point(x, y)};
     }
 }
@@ -1205,30 +1283,28 @@ struct Circle {
     Point<T> c;
     T r;
     [[gnu::always_inline, nodiscard, gnu::pure]] bool operator==(const Circle &other) const {
-        return c == other.c && eq(r, other.r);
+        return c == other.c && r == other.r;
     }
 };
 
-template<class T>
-[[gnu::always_inline, nodiscard]]
-optional<vector<Point<double>>> intersect(const Circle<T> &c, const Line<T> &l) {
-    double d = dist(l, c.c);
+template<std::floating_point Ret = double, class T1 = void, class T2 = void, class T3 = int>
+[[gnu::always_inline, nodiscard, gnu::pure]]
+inline optional<vector<Point<Ret>>> intersect(const Circle<T1> &c, const Line<T2> &l, T3 eps = 0) noexcept {
+    Ret d = dist<Ret>(l, c.c);
     if (d > c.r) {
-        return vector<Point<double>>{};
+        return vector<Point<Ret>>{};
     } else {
-        Point<double> dn = l.normal;
+        Point<Ret> dn = l.normal;
         if (dist_denomalized(l, c.c) > 0)
             dn = -dn;
-        dn /= sqrt(dn.sqrlen());
+        dn /= sqrt((Ret) dn.sqrlen());
         dn *= d;
-        Point<double> p = c.c;
+        Point<Ret> p = c.c;
         p += dn;
-        dn = l.normal;
-        swap(dn.x, dn.y);
-        dn.x = -dn.x;
+        dn = l.normal.left();
         dn /= sqrt(dn.sqrlen());
         dn *= sqrt(c.r * c.r - d * d);
-        if (p + dn == p - dn) {
+        if (near(p + dn, p - dn, eps)) {
             return vector{p + dn};
         } else {
             return vector{p + dn, p - dn};
@@ -1236,14 +1312,14 @@ optional<vector<Point<double>>> intersect(const Circle<T> &c, const Line<T> &l) 
     }
 }
 
-template<class T>
-[[gnu::always_inline, nodiscard]]
-optional<vector<Point<double>>> intersect(Circle<T> c1, Circle<T> c2) {
+template<std::floating_point Ret = double, class T1 = void, class T2 = void, class T3 = int>
+[[gnu::always_inline, nodiscard, gnu::pure]]
+inline optional<vector<Point<Ret>>> intersect(Circle<T1> c1, const Circle<T2> &c2, T3 eps = 0) noexcept {
     if (c1 == c2) {
         return nullopt;
     }
     c2.c -= c1.c;
-    auto ans = intersect(c2, Line<T>(-2 * c2.c.x, -2 * c2.c.y,
+    auto ans = intersect<Ret>(c2, Line<T2>(-2 * c2.c.x, -2 * c2.c.y,
         c2.c.x * c2.c.x + c2.c.y * c2.c.y + c1.r * c1.r - c2.r * c2.r));
     for (auto &p : ans)
         p += c1.c;
@@ -1251,31 +1327,31 @@ optional<vector<Point<double>>> intersect(Circle<T> c1, Circle<T> c2) {
 }
 
 template<class T>
-ostream &operator<<(ostream &out, const Circle<T> &c) {
+[[gnu::always_inline]] inline ostream &operator<<(ostream &out, const Circle<T> &c) {
     return out << c.c << " " << c.r;
 }
 
 template<class T>
-istream &operator>>(istream &in, Circle<T> &c) {
+[[gnu::always_inline]] inline istream &operator>>(istream &in, Circle<T> &c) {
     return in >> c.c >> c.r;
 }
 
-template<class T>
-[[gnu::always_inline, nodiscard]] bool is_inside(const Point<T> &p, const vector<Point<T>> &polygon) {
+template<class T, class T2 = int>
+[[gnu::always_inline, nodiscard]] inline bool is_inside(const Point<T> &p, const vector<Point<T>> &polygon, T2 eps = 0) {
     double sum = 0;
     for (int i = 0; i < (int) polygon.size(); ++i) {
         auto a = polygon[i] - p;
         auto b = polygon[(i + 1 == (int) polygon.size()) ? 0 : i + 1] - p;
-        if (a * b <= 0 && eq(a ^ b, (T) 0)) {
+        if (a * b <= 0 && near(a ^ b, 0, eps)) {
             return 1;
         }
         sum += atan2(a ^ b, a * b);
     }
-    return fabs(sum) > 1;
+    return abs(sum) > 1;
 }
 
 template<class T>
-[[gnu::always_inline, nodiscard]] T sqr2(const vector<Point<T>> &polygon) {
+[[gnu::always_inline, nodiscard]] inline T sqr2(const vector<Point<T>> &polygon) {
     T sum = 0;
     for (int i = 0; i < (int) polygon.size(); ++i) {
         sum += polygon[i] ^ polygon[(i + 1 == (int) polygon.size()) ? 0 : i + 1];
