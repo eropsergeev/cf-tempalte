@@ -1239,7 +1239,7 @@ template<floating_point Ret = double, class T = void>
 }
 
 template<class T1, class T2>
-[[gnu::always_inline, nodiscard, gnu::pure]] inline std::common_type_t<T1, T2> dist_denomalized(const Line<T1> &l, const Point<T2> &p) {
+[[gnu::always_inline, nodiscard, gnu::pure]] inline std::common_type_t<T1, T2> distDenomalized(const Line<T1> &l, const Point<T2> &p) {
     return (l.normal * p + l.c);
 }
 
