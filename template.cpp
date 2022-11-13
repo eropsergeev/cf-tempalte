@@ -47,10 +47,6 @@
     #endif
 #endif
 
-using ld = long double;
-using pii = std::pair<int, int>;
-using pll = std::pair<ll, ll>;
-
 #define XCAT(x, y) x##y
 #define CAT(x, y) XCAT(x, y)
 
@@ -79,6 +75,12 @@ using i_max = i64;
 using u_max = u64;
 
 #endif
+
+using ld = long double;
+using pii = std::pair<int, int>;
+using pll = std::pair<ll, ll>;
+using puu = std::pair<u32, u32>;
+using puu64 = std::pair<u64, u64>;
 
 const unsigned ll M1 = 4294967291, M2 = 4294967279, M = 998244353;
 
