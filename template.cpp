@@ -162,8 +162,9 @@ signed main() {
     ios::sync_with_stdio(0);
     cin.tie(0);
     cout.tie(0);
-    #ifndef LOCAL
+    #ifdef LOCAL
     _mm_setcsr(_mm_getcsr() & ~(0x0080 | 0x0200));
+    #else
     rnd.seed(random_device{}());
     #endif
     cout << setprecision(11) << fixed;
