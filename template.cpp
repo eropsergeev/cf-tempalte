@@ -106,7 +106,7 @@ template<bool neg>
 struct Inf {
     constexpr Inf() {}
     template<class T>
-    [[nodiscard, gnu::pure]] constexpr operator T() const {
+    [[nodiscard, gnu::pure]] constexpr operator T() const requires(std::integral<T> || std::floating_point<T>) {
         // No infinity for fast-math
         if constexpr (neg) {
             static_assert(is_signed_v<T>);
