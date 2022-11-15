@@ -286,6 +286,12 @@ template<std::integral Int>
     return views::iota(static_cast<Int>(0), n);
 }
 
+template<std::integral Int1, std::integral Int2>
+[[gnu::always_inline]] inline auto range(Int1 from, Int2 to) {
+    using T = std::common_type_t<Int1, Int2>;
+    return views::iota(static_cast<T>(from), static_cast<T>(to));
+}
+
 template<class T, class... Ts, class... Args>
 [[gnu::always_inline]] inline auto input(Args&&... args) {
     if constexpr (sizeof...(Ts) == 0) {
