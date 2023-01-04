@@ -1435,6 +1435,64 @@ void prints(const T &x, const Args & ...args) {
 
 #define named(x) #x, "=", x
 
+// #define FAST_ALLOC_MEM_SIZE 500e6
+#ifdef FAST_ALLOC_MEM_SIZE
+
+constexpr size_t TOTAL_MEM = FAST_ALLOC_MEM_SIZE;
+
+alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) static char buf[TOTAL_MEM];
+static char *ptr = buf;
+
+[[nodiscard]] inline void *my_alloc(size_t x, size_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__) noexcept {
+    ptr += (alignment - (reinterpret_cast<uintptr_t>(ptr) & (alignment - 1))) & (alignment - 1);
+    auto ret = reinterpret_cast<void *>(ptr);
+    ptr += x;
+    return ret;
+}
+
+[[nodiscard]] inline void *operator new(size_t x) {
+    return my_alloc(x);
+}
+
+[[nodiscard]] inline void *operator new(size_t x, align_val_t alignment) {
+    return my_alloc(x, static_cast<size_t>(alignment));
+}
+
+[[nodiscard]] inline void *operator new(size_t x, const nothrow_t&) {
+    return my_alloc(x);
+}
+
+[[nodiscard]] inline void *operator new(size_t x, align_val_t alignment, const nothrow_t&) {
+    return my_alloc(x, static_cast<size_t>(alignment));
+}
+
+[[nodiscard]] inline void *operator new[](size_t x) {
+    return my_alloc(x);
+}
+
+[[nodiscard]] inline void *operator new[](size_t x, align_val_t alignment) {
+    return my_alloc(x, static_cast<size_t>(alignment));
+}
+
+[[nodiscard]] inline void *operator new[](size_t x, const nothrow_t&) {
+    return my_alloc(x);
+}
+
+[[nodiscard]] inline void *operator new[](size_t x, align_val_t alignment, const nothrow_t&) {
+    return my_alloc(x, static_cast<size_t>(alignment));
+}
+
+inline void operator delete(void *) noexcept {}
+inline void operator delete(void *, size_t) noexcept {}
+inline void operator delete(void *, align_val_t) noexcept {}
+inline void operator delete(void *, size_t, align_val_t) noexcept {}
+inline void operator delete[](void *) noexcept {}
+inline void operator delete[](void *, size_t) noexcept {}
+inline void operator delete[](void *, align_val_t) noexcept {}
+inline void operator delete[](void *, size_t, align_val_t) noexcept {}
+
+#endif
+
 // #define NODEBUG
 #if defined NODEBUG || !defined LOCAL
 #define debug(...)
