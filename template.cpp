@@ -39,11 +39,14 @@
 #define yesno(x) ((x) ? "YES" : "NO")
 #ifdef LOCAL
     #define assume assert
+    #define unreachable() abort()
 #else
     #ifdef NOGNU
         #define assume(...)
-    #else 
-        #define assume(...) if (!(__VA_ARGS__)) __builtin_unreachable()
+        #define unreachable()
+    #else
+        #define unreachable() __builtin_unreachable()
+        #define assume(...) if (!(__VA_ARGS__)) unreachable()
     #endif
 #endif
 
