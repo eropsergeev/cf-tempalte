@@ -137,7 +137,7 @@ struct Inf {
     }
 };
 
-Inf<0> inf;
+static Inf<0> inf;
 
 template<class T1, class T2>
 [[gnu::always_inline]] inline bool mini(T1 &&a, T2 &&b) {
@@ -157,7 +157,7 @@ template<class T1, class T2>
     return 0;
 }
 
-mt19937 rnd(0);
+static mt19937 rnd(0);
 
 signed main() {
     #if defined FILENAME && !defined STDIO && !defined LOCAL
