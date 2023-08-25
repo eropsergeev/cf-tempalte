@@ -497,22 +497,20 @@ struct IdentityFunc {
     }
 };
 
-template<class join_t, class identity_t, class convert_t = IdentityFunc>
+template<class join_t, class convert_t = IdentityFunc>
 struct GetPolicy {
     [[no_unique_address]] join_t join;
-    [[no_unique_address]] identity_t identity;
     [[no_unique_address]] convert_t convert;
     template<class T>
     [[gnu::always_inline]] T get() {
         if constexpr (is_same_v<T, join_t>)
             return join;
-        else if constexpr (is_same_v<T, identity_t>)
-            return identity;
+        else
+            return;
     }
     [[gnu::always_inline]]
-    GetPolicy(join_t join, identity_t identity, convert_t convert = convert_t()):
+    GetPolicy(join_t join, convert_t convert = convert_t()):
         join(join),
-        identity(identity),
         convert(convert) {}
     template<class Self>
     struct type
@@ -523,9 +521,8 @@ struct GetPolicy {
             join_t,
             Self
         >
-        , public SegTreeInitType<-1, identity_t, Self>
     {
-        static constexpr int init_priority = -1;
+        static constexpr int init_priority = -inf;
         static constexpr int update_priority = -1;
         [[no_unique_address]] GetPolicy policy;
         type(GetPolicy policy)
@@ -536,20 +533,19 @@ struct GetPolicy {
                 join_t,
                 Self
             >(policy)
-            , SegTreeInitType<-1, identity_t, Self>(policy)
             , policy(policy) {}
         template<class... Args>
         auto get_impl(size_t ql, size_t qr, size_t v, size_t l, size_t r, Args&&... args) {
             auto self = static_cast<Self *>(this);
-            if (qr <= l || r <= ql) {
-                return static_cast<
-                        decltype(policy.convert(self->get_val(self->a[v]), forward<Args>(args)..., l, r))
-                    >(policy.identity(forward<Args>(args)..., l, r));
-            }
             self->push(v, l, r);
             if (ql <= l && r <= qr)
                 return policy.convert(self->get_val(self->a[v]), forward<Args>(args)..., l, r);
             size_t c = (l + r) / 2;
+            if (qr <= c) {
+                return get_impl(ql, qr, self->get_left(v, l, r), l, c, forward<Args>(args)...);
+            } else if (ql >= c) {
+                return get_impl(ql, qr, self->get_right(v, l, r), c, r, forward<Args>(args)...);
+            }
             return policy.join(
                 get_impl(ql, qr, self->get_left(v, l, r), l, c, forward<Args>(args)...),
                 get_impl(ql, qr, self->get_right(v, l, r), c, r, forward<Args>(args)...),
