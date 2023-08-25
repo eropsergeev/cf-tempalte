@@ -128,11 +128,11 @@ struct Inf {
     [[nodiscard, gnu::pure]] constexpr auto operator==(const T &x) const {
         return (T) *this == x;
     }
-    Inf &operator=(const Inf&) = delete;
-    Inf &operator=(Inf&&) = delete;
-    Inf(const Inf&) = delete;
-    Inf(Inf&&) = delete;
-    [[nodiscard]] Inf<!neg> operator-() const {
+    constexpr Inf &operator=(const Inf&) = delete;
+    constexpr Inf &operator=(Inf&&) = delete;
+    constexpr Inf(const Inf&) = delete;
+    constexpr Inf(Inf&&) = delete;
+    [[nodiscard]] constexpr Inf<!neg> operator-() const {
         return {};
     }
 };
