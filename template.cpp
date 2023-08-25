@@ -601,6 +601,8 @@ struct MassUpdatePolicy {
             mass_upd_impl(ql, qr, self->get_right(v, l, r), c, r, forward<Args>(args)...);
             auto left = self->get_left(v, l, r);
             auto right = self->get_right(v, l, r);
+            self->push(left, l, c);
+            self->push(right, c, r);
             self->join(self->get_val(self->a[v]), self->get_val(self->a[left]), self->get_val(self->a[right]));
         }
         template<class... Args>
