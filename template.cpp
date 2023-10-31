@@ -295,6 +295,133 @@ template<std::integral Int1, std::integral Int2>
     return views::iota(static_cast<T>(from), static_cast<T>(to));
 }
 
+template<std::ranges::range... Rs>
+class Zip;
+
+template<std::ranges::range... Rs>
+class ZipValuesWrapper {
+    template<std::ranges::range...>
+    friend class Zip;
+private:
+    [[gnu::always_inline]] explicit ZipValuesWrapper(const Zip<Rs...>::Its &its): its(its) {}
+    Zip<Rs...>::Its its;
+public:
+    template<size_t i>
+    [[gnu::always_inline]] decltype(*std::get<i>(its)) get() & {
+        return *std::get<i>(its);
+    }
+    template<size_t i>
+    [[gnu::always_inline]] const auto &get() const & {
+        return *std::get<i>(its);
+    }
+    template<size_t i>
+    [[gnu::always_inline]] auto get() && {
+        return *std::get<i>(its);
+    }
+};
+
+template<std::ranges::range... Rs>
+class Zip {
+    template<std::ranges::range...>
+    friend class ZipValuesWrapper;
+private:
+    using Its = std::tuple<std::ranges::iterator_t<Rs>...>;
+    using Sentinels = std::tuple<std::ranges::sentinel_t<Rs>...>;
+    using Vals = std::tuple<decltype(*std::declval<std::ranges::iterator_t<Rs>>())...>;
+    using ValuesWrapper = ZipValuesWrapper<Rs...>;
+
+    std::tuple<Rs...> ranges;
+public:
+    Zip(Rs&&... rs): ranges(std::forward<Rs>(rs)...) {}
+
+    template<size_t i>
+    using valueType = std::remove_reference_t<decltype(*std::get<i>(declval<Its>()))>;
+
+    class sentinel;
+
+    class iterator {
+        friend class Zip::sentinel;
+        friend class Zip;
+    private:
+        ValuesWrapper wrapper;
+
+        iterator(const Its &its): wrapper(its) {}
+    public:
+        [[gnu::always_inline]] ValuesWrapper &operator*() {
+            return wrapper;
+        }
+
+        [[gnu::always_inline]] const ValuesWrapper &operator*() const {
+            return wrapper;
+        }
+
+        [[gnu::always_inline]] iterator &operator++() {
+            [&]<size_t... i> [[gnu::always_inline]](std::index_sequence<i...>) {
+                return (((void) ++std::get<i>(wrapper.its)), ...);
+            }(std::make_index_sequence<sizeof...(Rs)>{});
+            return *this;
+        }
+
+        [[gnu::always_inline]] bool operator==(const sentinel &s) const {
+            return [&]<size_t... i> [[gnu::always_inline]](std::index_sequence<i...>) {
+                return ((std::get<i>(wrapper.its) == std::get<i>(s.sents)) || ...);
+            }(std::make_index_sequence<sizeof...(Rs)>{});
+        }
+
+        [[gnu::always_inline]] bool operator!=(const sentinel &s) const {
+            return !(*this == s);
+        }
+    };
+
+    class sentinel {
+        friend class Zip;
+
+    private:
+        Sentinels sents;
+
+        [[gnu::always_inline]] explicit sentinel(const Sentinels &sents): sents(sents) {}
+    };
+
+    [[gnu::always_inline]] auto begin() {
+        return iterator([this]<size_t... i> [[gnu::always_inline]](std::index_sequence<i...>) {
+            return Its(std::get<i>(this->ranges).begin()...);
+        }(std::make_index_sequence<sizeof...(Rs)>{}));
+    }
+
+    [[gnu::always_inline]] auto end() {
+        return sentinel([this]<size_t... i> [[gnu::always_inline]](std::index_sequence<i...>) {
+            return Sentinels(std::get<i>(ranges).end()...);
+        }(std::make_index_sequence<sizeof...(Rs)>{}));
+    }
+};
+
+template<class... Rs>
+Zip(Rs&&...) -> Zip<Rs...>;
+
+namespace std {
+
+template<class... Rs>
+struct tuple_size<ZipValuesWrapper<Rs...>>: std::integral_constant<size_t, sizeof...(Rs)> {};
+
+template<size_t i, class... Rs>
+struct tuple_element<i, ZipValuesWrapper<Rs...>> {
+    using type = typename Zip<Rs...>::valueType<i>;
+};
+
+}
+
+struct Enumerate {
+    template<std::ranges::range R>
+    auto operator()(R &&r) {
+        return Zip(range(std::ranges::size(r)), std::forward<R>(r));
+    }
+} enumerate;
+
+template<std::ranges::range R>
+auto operator|(R &&r, Enumerate e) {
+    return e(std::forward<R>(r));
+}
+
 template<class T, class... Ts, class... Args>
 [[gnu::always_inline]] inline auto input(Args&&... args) {
     if constexpr (sizeof...(Ts) == 0) {
@@ -1508,3 +1635,4 @@ inline void operator delete[](void *, size_t, align_val_t) noexcept {}
 void run() {
     
 }
+
