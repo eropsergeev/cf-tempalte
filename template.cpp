@@ -27,8 +27,8 @@
 #endif // NOGNU
 #define lambda(body, ...) [&][[gnu::always_inline]](__VA_ARGS__) { return body; }
 #define vlambda(body, ...) lambda(body, __VA_ARGS__ __VA_OPT__(,) auto&&...)
-#define trans(...) views::transform(lambda(__VA_ARGS__))
-#define vtrans(...) views::transform(vlambda(__VA_ARGS__))
+#define trans(...) views::transform(lambda((__VA_ARGS__), auto $))
+#define filt(...) views::filter(lambda((__VA_ARGS__), auto $))
 #define all(x) (x).begin(), (x).end()
 #define F first
 #define S second
@@ -801,6 +801,8 @@ struct SegTree: BaseSegTree, public Policies<SegTree<T, Policies...>>... {
         : Policies<SegTree<T, Policies...>>(policies)...
         , n(n)
     {
+        if (n == 0)
+            return;
         size_t sz = 1;
         while (sz < n)
             sz <<= 1;
@@ -1635,4 +1637,3 @@ inline void operator delete[](void *, size_t, align_val_t) noexcept {}
 void run() {
     
 }
-
